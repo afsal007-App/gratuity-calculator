@@ -69,11 +69,11 @@ with st.form("employee_form"):
 
 # --------- Helper Functions ---------
 def calculate_gratuity(doj, basic_salary, as_of):
-    provision_start_date = doj + timedelta(days=365)
-    if provision_start_date > as_of:
+    # Check eligibility (minimum 1 year of service)
+    if doj + timedelta(days=365) > as_of:
         return 0.0, 0, 0, 0.0, 0.0, [], False
 
-    current = provision_start_date.replace(day=1)
+    current = doj.replace(day=1)  # Start from month of joining
     total_prov = 0
     count_months = 0
     monthly_rows = []
@@ -100,7 +100,7 @@ def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_
     if not eligible:
         return []
     rows = []
-    provision_start = doj + timedelta(days=365)
+    provision_start = doj
     for i in range(1, years + 1):
         provision = yearly_21 if i <= 5 else yearly_30
         end_date = provision_start.replace(year=provision_start.year + i)
