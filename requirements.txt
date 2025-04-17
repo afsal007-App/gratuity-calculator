@@ -1,3 +1,6 @@
 streamlit>=1.10.0
 pandas
 xlsxwriter
+matplotlib
+seaborn
+
