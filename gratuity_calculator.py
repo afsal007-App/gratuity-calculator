@@ -5,25 +5,48 @@ from io import BytesIO
 import calendar
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
-st.title("UAE Gratuity Calculator")
+
+# ---------- Custom Styling ----------
+st.markdown("""
+    <style>
+    #MainMenu, header, footer {visibility: hidden;}
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    .stDownloadButton button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 0.6em 1.2em;
+        border-radius: 8px;
+        border: none;
+    }
+    .stButton button {
+        border-radius: 8px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <h1 style='text-align: center; color: #2c3e50;'>🏆 UAE Gratuity Calculator</h1>
+    <p style='text-align: center; color: grey;'>Multi-Employee Entry with Yearly and Monthly Breakdown</p>
+""", unsafe_allow_html=True)
 
 # --------- Session State ---------
 if "employee_data" not in st.session_state:
     st.session_state.employee_data = []
-
 if "processed" not in st.session_state:
     st.session_state.processed = False
-
 if "remove_index" not in st.session_state:
     st.session_state.remove_index = None
 
 # --------- Date Selection ---------
+st.markdown("### 🗓️ Provision Date")
 as_of_date = st.date_input("Gratuity Provision As of", date.today())
 
 # --------- Employee Entry Form ---------
+st.markdown("### 👥 Add Employee Details")
 with st.form("employee_form"):
-    st.subheader("Enter Employee Details")
-
     col1, col2, col3 = st.columns(3)
     emp_name = col1.text_input("Employee Name")
     doj = col2.date_input("Date of Joining", date(2020, 1, 1))
@@ -111,8 +134,7 @@ def generate_monthly_breakup(emp_name, monthly_rows):
 
 # --------- Display Entries with Remove Option ---------
 if st.session_state.employee_data:
-    st.subheader("📁 Entries Added")
-
+    st.markdown("### 🧾 Entries Added")
     for i, emp in enumerate(st.session_state.employee_data):
         with st.container():
             cols = st.columns([2, 2, 2, 2, 1])
@@ -141,7 +163,7 @@ if st.session_state.employee_data:
 
 # --------- Show Processed Results ---------
 if st.session_state.processed:
-    st.subheader("📋 Consolidated Gratuity Table")
+    st.markdown("### 📋 Gratuity Summary")
 
     summary_data, yearly_data, monthly_data = [], [], []
 
@@ -183,4 +205,5 @@ if st.session_state.processed:
         df_summary.to_excel(writer, index=False, sheet_name="Summary")
         df_yearly.to_excel(writer, index=False, sheet_name="Yearly Breakdown")
         df_monthly.to_excel(writer, index=False, sheet_name="Monthly Breakdown")
+
     st.download_button("📥 Download Excel Report", data=output.getvalue(), file_name="gratuity_report.xlsx")
