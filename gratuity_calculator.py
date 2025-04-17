@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import date, timedelta
 import pandas as pd
 from io import BytesIO
+import calendar
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
 st.title("\U0001F4DD UAE Gratuity Calculator – Multi-Employee Entry with Yearly/Monthly Breakdown")
@@ -105,7 +106,9 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
             "Provision (AED)": round(rate, 2),
             "Rate Applied": "21 days" if i < 60 else "30 days"
         })
-        current = current.replace(month=1, year=current.year + 1) if current.month == 12 else current.replace(month=current.month + 1)
+        # Safely increment the month
+        days_in_month = calendar.monthrange(current.year, current.month)[1]
+        current += timedelta(days=days_in_month)
     return rows
 
 # --------- Display Entries with Remove Option ---------
