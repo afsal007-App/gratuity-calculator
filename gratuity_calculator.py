@@ -13,6 +13,9 @@ if "employee_data" not in st.session_state:
 if "processed" not in st.session_state:
     st.session_state.processed = False
 
+if "remove_index" not in st.session_state:
+    st.session_state.remove_index = None
+
 # --------- Date Selection ---------
 as_of_date = st.date_input("Gratuity Provision As of", date.today())
 
@@ -115,7 +118,7 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
 
     return monthly_rows
 
-# --------- Display Entries and Remove Option ---------
+# --------- Display Entries with Remove Option ---------
 if st.session_state.employee_data:
     st.subheader("🗂️ Entries Added")
 
@@ -126,10 +129,16 @@ if st.session_state.employee_data:
         col3.write(f"💰 AED {emp['Basic Salary (AED)']:,.2f}")
         col4.write("")
         if col5.button("❌ Remove", key=f"remove_{i}"):
-            st.session_state.employee_data.pop(i)
-            st.session_state.processed = False
-            st.experimental_rerun()
+            st.session_state.remove_index = i
 
+    # Handle removal safely after rendering
+    if st.session_state.remove_index is not None:
+        st.session_state.employee_data.pop(st.session_state.remove_index)
+        st.session_state.remove_index = None
+        st.session_state.processed = False
+        st.experimental_rerun()
+
+    # Process & Reset Buttons
     colA, colB = st.columns([1, 1.2])
     with colA:
         if st.button("✅ Process Gratuity Calculations"):
