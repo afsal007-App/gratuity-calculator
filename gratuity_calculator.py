@@ -1,116 +1,94 @@
-# 📁 gratuity_calculator.py
+# 📁 gratuity_manual_entry.py
 
 import streamlit as st
-from datetime import datetime, date
+from datetime import date, datetime
 import pandas as pd
+from io import BytesIO
 
-# -------------------- App Title --------------------
-st.title("🧮 UAE Gratuity Provision Calculator")
+st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
+st.title("📝 UAE Gratuity Calculator – Manual Multi-Employee Entry")
 
-# -------------------- Inputs --------------------
-st.header("Enter Employee Details")
+# --------- Session State Setup ---------
+if "employee_data" not in st.session_state:
+    st.session_state.employee_data = []
 
-col1, col2 = st.columns(2)
+# --------- Date Selection ---------
+as_of_date = st.date_input("Gratuity Provision As of", date.today())
 
-with col1:
-    emp_name = st.text_input("Employee Name", "Sicily George")
-    doj = st.date_input("Date of Joining", date(2018, 8, 1))
+# --------- Employee Entry Form ---------
+with st.form("employee_form"):
+    st.subheader("Enter Employee Details")
 
-with col2:
-    basic_salary = st.number_input("Basic Salary (AED)", value=10000)
-    as_of_date = st.date_input("Gratuity as of", date.today())
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        emp_name = st.text_input("Employee Name")
+    with col2:
+        doj = st.date_input("Date of Joining", date(2020, 1, 1))
+    with col3:
+        basic_salary = st.number_input("Basic Salary (AED)", min_value=0.0, value=10000.0)
 
-# -------------------- Calculate Provision --------------------
-if doj >= as_of_date:
-    st.error("Gratuity as of date must be after the date of joining.")
-else:
-    # Calculate number of years and months
-    delta_years = as_of_date.year - doj.year
-    delta_months = (as_of_date.year - doj.year) * 12 + as_of_date.month - doj.month
-
-    # Adjust if day is earlier in the month
-    if as_of_date.day < doj.day:
-        delta_months -= 1
-
-    total_years = delta_months // 12
-    remaining_months = delta_months % 12
-
-    # Gratuity provision
-    first_5_years = min(5, total_years)
-    after_5_years = max(0, total_years - 5)
-
-    yearly_21_day_prov = (21 / 30) * basic_salary  # For first 5 years
-    yearly_30_day_prov = basic_salary              # After 5 years
-
-    provision_5_years = first_5_years * yearly_21_day_prov
-    provision_after_5 = after_5_years * yearly_30_day_prov
-
-    # Monthly provision based on current year of service
-    if total_years < 5:
-        monthly_rate = yearly_21_day_prov / 12
-    else:
-        monthly_rate = yearly_30_day_prov / 12
-
-    provision_extra_months = remaining_months * monthly_rate
-    total_provision = provision_5_years + provision_after_5 + provision_extra_months
-
-    # -------------------- Output Summary --------------------
-    st.subheader("📊 Gratuity Summary")
-    st.markdown(f"**Employee:** {emp_name}")
-    st.markdown(f"**Years of Service:** {total_years} years and {remaining_months} months")
-    st.markdown(f"**Total Provision (AED):** `AED {total_provision:,.2f}`")
-
-    st.write("---")
-
-    # -------------------- Yearly Breakdown --------------------
-    st.subheader("📆 Yearly Provision Breakdown")
-
-    yearly_data = []
-    for i in range(1, total_years + 1):
-        if i <= 5:
-            yearly_amt = yearly_21_day_prov
-            rate = "70% (21 days)"
+    submitted = st.form_submit_button("➕ Add Employee")
+    if submitted:
+        if doj >= as_of_date:
+            st.error("❌ Date of joining must be before the 'As of' date.")
+        elif not emp_name.strip():
+            st.error("❌ Employee Name is required.")
         else:
-            yearly_amt = yearly_30_day_prov
-            rate = "100% (30 days)"
-        year_date = doj.replace(year=doj.year + i)
-        if year_date > as_of_date:
-            break
-        yearly_data.append({
-            "Year": f"Year {i}",
-            "End Date": year_date,
-            "Rate": rate,
-            "Provision (AED)": round(yearly_amt, 2)
+            st.session_state.employee_data.append({
+                "Employee Name": emp_name.strip(),
+                "Date of Joining": doj,
+                "Basic Salary (AED)": basic_salary
+            })
+            st.success(f"✅ Added {emp_name.strip()}")
+
+# --------- Helper Function ---------
+def calculate_gratuity(doj, basic_salary, as_of):
+    months = (as_of.year - doj.year) * 12 + (as_of.month - doj.month)
+    if as_of.day < doj.day:
+        months -= 1
+
+    years = months // 12
+    rem_months = months % 12
+
+    first_5 = min(5, years)
+    after_5 = max(0, years - 5)
+
+    yearly_21 = (21 / 30) * basic_salary
+    yearly_30 = basic_salary
+    monthly_rate = yearly_30 / 12 if years >= 5 else yearly_21 / 12
+
+    provision = first_5 * yearly_21 + after_5 * yearly_30 + rem_months * monthly_rate
+    return round(provision, 2), years, rem_months
+
+# --------- Display Table ---------
+if st.session_state.employee_data:
+    st.subheader("📋 Employee Gratuity Table")
+
+    records = []
+    for emp in st.session_state.employee_data:
+        provision, years, months = calculate_gratuity(emp["Date of Joining"], emp["Basic Salary (AED)"], as_of_date)
+        records.append({
+            "Employee Name": emp["Employee Name"],
+            "Date of Joining": emp["Date of Joining"],
+            "Basic Salary (AED)": emp["Basic Salary (AED)"],
+            "Years": years,
+            "Months": months,
+            "Total Provision (AED)": provision
         })
 
-    if remaining_months > 0:
-        yearly_data.append({
-            "Year": f"Extra {remaining_months} month(s)",
-            "End Date": as_of_date,
-            "Rate": f"{'100%' if total_years >= 5 else '70%'}",
-            "Provision (AED)": round(provision_extra_months, 2)
-        })
+    df = pd.DataFrame(records)
+    st.dataframe(df, use_container_width=True)
 
-    df_yearly = pd.DataFrame(yearly_data)
-    st.dataframe(df_yearly)
+    st.subheader(f"📊 Total Provision: AED {df['Total Provision (AED)'].sum():,.2f}")
 
-    # -------------------- Month-wise Breakdown --------------------
-    st.subheader("🗓️ Monthly Provision Breakdown")
-    monthly_data = []
-    current = doj
-    for i in range(delta_months):
-        year = current.year
-        month = current.month
-        rate = yearly_21_day_prov/12 if (i < 60) else yearly_30_day_prov/12
-        monthly_data.append({
-            "Month": f"{current.strftime('%b %Y')}",
-            "Provision (AED)": round(rate, 2)
-        })
-        # Move to next month
-        if month == 12:
-            current = current.replace(year=year + 1, month=1)
-        else:
-            current = current.replace(month=month + 1)
+    # --------- Download Button ---------
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name="Gratuity Summary")
+        writer.save()
+    st.download_button("📥 Download as Excel", data=output.getvalue(), file_name="manual_gratuity_summary.xlsx")
 
-    df_monthly = pd.DataFrame(monthly_data)
-    st.dataframe(df_monthly)
+# --------- Reset Button ---------
+if st.button("🗑️ Reset All Entries"):
+    st.session_state.employee_data = []
+    st.experimental_rerun()
