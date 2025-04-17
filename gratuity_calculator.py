@@ -4,7 +4,7 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
-st.title("📝 UAE Gratuity Calculator – Manual Multi-Employee Entry")
+st.title("📝 UAE Gratuity Calculator – Manual Multi-Employee Entry with Breakup")
 
 # --------- Session State Setup ---------
 if "employee_data" not in st.session_state:
@@ -41,9 +41,9 @@ with st.form("employee_form"):
                 "Basic Salary (AED)": basic_salary
             })
             st.success(f"✅ Added {emp_name.strip()}")
-            st.session_state.processed = False  # reset after new entry
+            st.session_state.processed = False
 
-# --------- Helper Function ---------
+# --------- Helper Functions ---------
 def calculate_gratuity(doj, basic_salary, as_of):
     months = (as_of.year - doj.year) * 12 + (as_of.month - doj.month)
     if as_of.day < doj.day:
@@ -60,9 +60,54 @@ def calculate_gratuity(doj, basic_salary, as_of):
     monthly_rate = yearly_30 / 12 if years >= 5 else yearly_21 / 12
 
     provision = first_5 * yearly_21 + after_5 * yearly_30 + rem_months * monthly_rate
-    return round(provision, 2), years, rem_months
+    return round(provision, 2), years, rem_months, yearly_21, yearly_30, monthly_rate
 
-# --------- Display Entries + Always-Visible Buttons ---------
+def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_30, as_of):
+    year_rows = []
+    for i in range(1, years + 1):
+        year_end = doj.replace(year=doj.year + i)
+        provision = yearly_21 if i <= 5 else yearly_30
+        rate = "21 days (70%)" if i <= 5 else "30 days (100%)"
+        year_rows.append({
+            "Employee": emp_name,
+            "Year": f"Year {i}",
+            "End Date": year_end,
+            "Provision (AED)": round(provision, 2),
+            "Rate Applied": rate
+        })
+
+    if rem_months > 0:
+        year_rows.append({
+            "Employee": emp_name,
+            "Year": f"Extra {rem_months} Month(s)",
+            "End Date": as_of,
+            "Provision (AED)": round(rem_months * (yearly_30 / 12 if years >= 5 else yearly_21 / 12), 2),
+            "Rate Applied": "Monthly"
+        })
+
+    return year_rows
+
+def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30):
+    monthly_rows = []
+    current = doj
+    for i in range(months):
+        rate = (yearly_21 / 12) if i < 60 else (yearly_30 / 12)
+        monthly_rows.append({
+            "Employee": emp_name,
+            "Month": current.strftime("%b %Y"),
+            "Provision (AED)": round(rate, 2),
+            "Rate Applied": "21 days" if i < 60 else "30 days"
+        })
+
+        # Advance to next month
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
+
+    return monthly_rows
+
+# --------- Show Employee Table & Buttons ---------
 if st.session_state.employee_data:
     st.subheader("🗂️ Entries Added")
     st.dataframe(pd.DataFrame(st.session_state.employee_data), use_container_width=True)
@@ -77,29 +122,51 @@ if st.session_state.employee_data:
             st.session_state.processed = False
             st.experimental_rerun()
 
-# --------- Processed Gratuity Output ---------
+# --------- Show Results ---------
 if st.session_state.processed:
-    st.subheader("📋 Employee Gratuity Table")
+    st.subheader("📋 Consolidated Gratuity Table")
 
-    records = []
+    summary_data = []
+    yearly_breakup = []
+    monthly_breakup = []
+
     for emp in st.session_state.employee_data:
-        provision, years, months = calculate_gratuity(emp["Date of Joining"], emp["Basic Salary (AED)"], as_of_date)
-        records.append({
-            "Employee Name": emp["Employee Name"],
-            "Date of Joining": emp["Date of Joining"],
-            "Basic Salary (AED)": emp["Basic Salary (AED)"],
+        emp_name = emp["Employee Name"]
+        doj = emp["Date of Joining"]
+        basic = emp["Basic Salary (AED)"]
+
+        total_prov, years, rem_months, y21, y30, m_rate = calculate_gratuity(doj, basic, as_of_date)
+        summary_data.append({
+            "Employee Name": emp_name,
+            "Date of Joining": doj,
+            "Basic Salary (AED)": basic,
             "Years": years,
-            "Months": months,
-            "Total Provision (AED)": provision
+            "Months": rem_months,
+            "Total Provision (AED)": total_prov
         })
 
-    df = pd.DataFrame(records)
-    st.dataframe(df, use_container_width=True)
+        yearly_breakup.extend(generate_yearly_breakup(emp_name, doj, years, rem_months, y21, y30, as_of_date))
+        monthly_breakup.extend(generate_monthly_breakup(emp_name, doj, years * 12 + rem_months, y21, y30))
 
-    st.subheader(f"📊 Total Provision: AED {df['Total Provision (AED)'].sum():,.2f}")
+    df_summary = pd.DataFrame(summary_data)
+    df_yearly = pd.DataFrame(yearly_breakup)
+    df_monthly = pd.DataFrame(monthly_breakup)
 
-    # --------- Excel Download ---------
+    st.dataframe(df_summary, use_container_width=True)
+    st.subheader(f"📊 Total Gratuity Provision: AED {df_summary['Total Provision (AED)'].sum():,.2f}")
+
+    # Yearly
+    with st.expander("📆 Yearly Provision Breakdown"):
+        st.dataframe(df_yearly, use_container_width=True)
+
+    # Monthly
+    with st.expander("🗓️ Month-wise Provision Breakdown"):
+        st.dataframe(df_monthly, use_container_width=True)
+
+    # Download Button
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name="Gratuity Summary")
-    st.download_button("📥 Download as Excel", data=output.getvalue(), file_name="manual_gratuity_summary.xlsx")
+        df_summary.to_excel(writer, index=False, sheet_name="Gratuity Summary")
+        df_yearly.to_excel(writer, index=False, sheet_name="Yearly Breakdown")
+        df_monthly.to_excel(writer, index=False, sheet_name="Monthly Breakdown")
+    st.download_button("📥 Download Excel Report", data=output.getvalue(), file_name="gratuity_report.xlsx")
