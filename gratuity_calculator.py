@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import date
+from datetime import date, timedelta
 import pandas as pd
 from io import BytesIO
 
@@ -45,15 +45,16 @@ with st.form("employee_form"):
 
 # --------- Helper Functions ---------
 def calculate_gratuity(doj, basic_salary, as_of):
-    months = (as_of.year - doj.year) * 12 + (as_of.month - doj.month)
-    if as_of.day < doj.day:
+    provision_start_date = doj + timedelta(days=365)
+    if provision_start_date > as_of:
+        return 0.0, 0, 0, 0.0, 0.0, 0.0, False
+
+    months = (as_of.year - provision_start_date.year) * 12 + (as_of.month - provision_start_date.month)
+    if as_of.day < provision_start_date.day:
         months -= 1
 
     years = months // 12
     rem_months = months % 12
-
-    if years < 1:
-        return 0.0, years, rem_months, 0.0, 0.0, 0.0, False
 
     first_5 = min(5, years)
     after_5 = max(0, years - 5)
@@ -69,12 +70,14 @@ def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_
     if not eligible:
         return []
     rows = []
+    provision_start = doj + timedelta(days=365)
     for i in range(1, years + 1):
         provision = yearly_21 if i <= 5 else yearly_30
+        end_date = provision_start.replace(year=provision_start.year + i)
         rows.append({
             "Employee": emp_name,
             "Year": f"Year {i}",
-            "End Date": doj.replace(year=doj.year + i),
+            "End Date": end_date,
             "Provision (AED)": round(provision, 2),
             "Rate Applied": "21 days" if i <= 5 else "30 days"
         })
@@ -93,7 +96,7 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
     if not eligible:
         return []
     rows = []
-    current = doj
+    current = doj + timedelta(days=365)
     for i in range(months):
         rate = yearly_21 / 12 if i < 60 else yearly_30 / 12
         rows.append({
