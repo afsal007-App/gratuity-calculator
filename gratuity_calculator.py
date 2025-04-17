@@ -4,7 +4,7 @@ import pandas as pd
 from io import BytesIO
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
-st.title("📝 UAE Gratuity Calculator – Multi-Employee Entry with Yearly/Monthly Breakdown")
+st.title("\U0001F4DD UAE Gratuity Calculator – Multi-Employee Entry with Yearly/Monthly Breakdown")
 
 # --------- Session State ---------
 if "employee_data" not in st.session_state:
@@ -107,13 +107,13 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
 
 # --------- Display Entries with Remove Option ---------
 if st.session_state.employee_data:
-    st.subheader("🗂️ Entries Added")
+    st.subheader("📁 Entries Added")
 
     for i, emp in enumerate(st.session_state.employee_data):
         cols = st.columns([2, 2, 2, 2, 1, 1])
-        cols[0].write(f"👤 {emp['Employee Name']}")
-        cols[1].write(f"📅 {emp['Date of Joining'].strftime('%d-%b-%Y')}")
-        cols[2].write(f"💰 AED {emp['Basic Salary (AED)']:,.2f}")
+        cols[0].markdown(f"👤 **{emp['Employee Name']}**")
+        cols[1].markdown(f"📅 **{emp['Date of Joining'].strftime('%d-%b-%Y')}**")
+        cols[2].markdown(f"💰 **AED {emp['Basic Salary (AED)']:,.2f}**")
         if cols[4].button("❌ Remove", key=f"remove_{i}"):
             st.session_state.remove_index = i
 
@@ -123,7 +123,7 @@ if st.session_state.employee_data:
         st.session_state.remove_index = None
         st.session_state.processed = False
         st.success("✅ Entry removed. Please click 'Process' again.")
-        st.stop()  # Stop app here to avoid crashing
+        st.stop()
 
     # Action buttons
     colA, colB = st.columns([1, 1.2])
