@@ -102,5 +102,4 @@ if st.session_state.processed:
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name="Gratuity Summary")
-        writer.save()
     st.download_button("📥 Download as Excel", data=output.getvalue(), file_name="manual_gratuity_summary.xlsx")
