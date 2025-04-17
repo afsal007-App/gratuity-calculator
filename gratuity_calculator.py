@@ -50,22 +50,28 @@ def calculate_gratuity(doj, basic_salary, as_of):
     if provision_start_date > as_of:
         return 0.0, 0, 0, 0.0, 0.0, 0.0, False
 
-    months = (as_of.year - provision_start_date.year) * 12 + (as_of.month - provision_start_date.month)
-    if as_of.day < provision_start_date.day:
-        months -= 1
+    current = provision_start_date
+    total_prov = 0
+    count_months = 0
+    monthly_rows = []
 
-    years = months // 12
-    rem_months = months % 12
+    while current <= as_of:
+        count_months += 1
+        rate_applied = "21 days" if count_months <= 60 else "30 days"
+        rate = (21 / 30) * basic_salary / 12 if count_months <= 60 else basic_salary / 12
+        total_prov += rate
+        monthly_rows.append((current.strftime("%b %Y"), round(rate, 2), rate_applied))
 
-    first_5 = min(5, years)
-    after_5 = max(0, years - 5)
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
 
+    years = count_months // 12
+    rem_months = count_months % 12
     yearly_21 = (21 / 30) * basic_salary
     yearly_30 = basic_salary
-    monthly_rate = yearly_30 / 12 if years >= 5 else yearly_21 / 12
-
-    provision = first_5 * yearly_21 + after_5 * yearly_30 + rem_months * monthly_rate
-    return round(provision, 2), years, rem_months, yearly_21, yearly_30, monthly_rate, True
+    return round(total_prov, 2), years, rem_months, yearly_21, yearly_30, monthly_rows, True
 
 def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_30, as_of, eligible):
     if not eligible:
@@ -93,24 +99,15 @@ def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_
         })
     return rows
 
-def generate_monthly_breakup(emp_name, doj, yearly_21, yearly_30, eligible):
-    if not eligible:
-        return []
-    rows = []
-    current = doj + timedelta(days=365)
-    while current <= as_of_date:
-        rate = yearly_21 / 12 if len(rows) < 60 else yearly_30 / 12
-        rows.append({
+def generate_monthly_breakup(emp_name, monthly_rows):
+    return [
+        {
             "Employee": emp_name,
-            "Month": current.strftime("%b %Y"),
-            "Provision (AED)": round(rate, 2),
-            "Rate Applied": "21 days" if len(rows) < 60 else "30 days"
-        })
-        if current.month == 12:
-            current = current.replace(year=current.year + 1, month=1)
-        else:
-            current = current.replace(month=current.month + 1)
-    return rows
+            "Month": month,
+            "Provision (AED)": provision,
+            "Rate Applied": rate
+        } for month, provision, rate in monthly_rows
+    ]
 
 # --------- Display Entries with Remove Option ---------
 if st.session_state.employee_data:
@@ -155,7 +152,7 @@ if st.session_state.processed:
         doj = emp["Date of Joining"]
         salary = emp["Basic Salary (AED)"]
 
-        total, yrs, mos, y21, y30, mrate, eligible = calculate_gratuity(doj, salary, as_of_date)
+        total, yrs, mos, y21, y30, monthly_rows, eligible = calculate_gratuity(doj, salary, as_of_date)
 
         summary_data.append({
             "Employee Name": name,
@@ -168,7 +165,7 @@ if st.session_state.processed:
         })
 
         yearly_data += generate_yearly_breakup(name, doj, yrs, mos, y21, y30, as_of_date, eligible)
-        monthly_data += generate_monthly_breakup(name, doj, y21, y30, eligible)
+        monthly_data += generate_monthly_breakup(name, monthly_rows)
 
     df_summary = pd.DataFrame(summary_data)
     df_yearly = pd.DataFrame(yearly_data)
