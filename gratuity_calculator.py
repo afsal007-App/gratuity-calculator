@@ -93,7 +93,7 @@ def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_
         })
     return rows
 
-def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligible):
+def generate_monthly_breakup(emp_name, doj, yearly_21, yearly_30, eligible):
     if not eligible:
         return []
     rows = []
@@ -106,8 +106,10 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
             "Provision (AED)": round(rate, 2),
             "Rate Applied": "21 days" if len(rows) < 60 else "30 days"
         })
-        days_in_month = calendar.monthrange(current.year, current.month)[1]
-        current += timedelta(days=days_in_month)
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1, day=1)
+        else:
+            current = current.replace(month=current.month + 1, day=1)
     return rows
 
 # --------- Display Entries with Remove Option ---------
@@ -166,7 +168,7 @@ if st.session_state.processed:
         })
 
         yearly_data += generate_yearly_breakup(name, doj, yrs, mos, y21, y30, as_of_date, eligible)
-        monthly_data += generate_monthly_breakup(name, doj, yrs * 12 + mos, y21, y30, eligible)
+        monthly_data += generate_monthly_breakup(name, doj, y21, y30, eligible)
 
     df_summary = pd.DataFrame(summary_data)
     df_yearly = pd.DataFrame(yearly_data)
