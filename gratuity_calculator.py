@@ -12,6 +12,9 @@ st.title("📝 UAE Gratuity Calculator – Manual Multi-Employee Entry")
 if "employee_data" not in st.session_state:
     st.session_state.employee_data = []
 
+if "processed" not in st.session_state:
+    st.session_state.processed = False
+
 # --------- Date Selection ---------
 as_of_date = st.date_input("Gratuity Provision As of", date.today())
 
@@ -40,8 +43,15 @@ with st.form("employee_form"):
                 "Basic Salary (AED)": basic_salary
             })
             st.success(f"✅ Added {emp_name.strip()}")
+            st.session_state.processed = False  # reset if new entry is added
 
-# --------- Helper Function ---------
+# --------- PROCESS Button ---------
+if st.session_state.employee_data:
+    st.write("### 👉 Entries Added:", len(st.session_state.employee_data))
+    if st.button("✅ Process Gratuity Calculations"):
+        st.session_state.processed = True
+
+# --------- Gratuity Calculation Function ---------
 def calculate_gratuity(doj, basic_salary, as_of):
     months = (as_of.year - doj.year) * 12 + (as_of.month - doj.month)
     if as_of.day < doj.day:
@@ -60,8 +70,8 @@ def calculate_gratuity(doj, basic_salary, as_of):
     provision = first_5 * yearly_21 + after_5 * yearly_30 + rem_months * monthly_rate
     return round(provision, 2), years, rem_months
 
-# --------- Display Table ---------
-if st.session_state.employee_data:
+# --------- Process and Display ---------
+if st.session_state.processed:
     st.subheader("📋 Employee Gratuity Table")
 
     records = []
@@ -81,7 +91,7 @@ if st.session_state.employee_data:
 
     st.subheader(f"📊 Total Provision: AED {df['Total Provision (AED)'].sum():,.2f}")
 
-    # --------- Download Button ---------
+    # --------- Excel Download ---------
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name="Gratuity Summary")
@@ -91,4 +101,5 @@ if st.session_state.employee_data:
 # --------- Reset Button ---------
 if st.button("🗑️ Reset All Entries"):
     st.session_state.employee_data = []
+    st.session_state.processed = False
     st.experimental_rerun()
