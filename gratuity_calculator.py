@@ -110,20 +110,20 @@ if st.session_state.employee_data:
     st.subheader("📁 Entries Added")
 
     for i, emp in enumerate(st.session_state.employee_data):
-        cols = st.columns([2, 2, 2, 2, 1, 1])
-        cols[0].markdown(f"👤 **{emp['Employee Name']}**")
-        cols[1].markdown(f"📅 **{emp['Date of Joining'].strftime('%d-%b-%Y')}**")
-        cols[2].markdown(f"💰 **AED {emp['Basic Salary (AED)']:,.2f}**")
-        if cols[4].button("❌ Remove", key=f"remove_{i}"):
-            st.session_state.remove_index = i
+        with st.container():
+            cols = st.columns([2, 2, 2, 2, 1])
+            cols[0].markdown(f"👤 **{emp['Employee Name']}**")
+            cols[1].markdown(f"📅 **{emp['Date of Joining'].strftime('%d-%b-%Y')}**")
+            cols[2].markdown(f"💰 **AED {emp['Basic Salary (AED)']:,.2f}**")
+            if cols[4].button("❌ Remove", key=f"remove_{i}"):
+                st.session_state.remove_index = i
 
     # Perform safe removal
     if st.session_state.remove_index is not None:
         st.session_state.employee_data.pop(st.session_state.remove_index)
         st.session_state.remove_index = None
         st.session_state.processed = False
-        st.success("✅ Entry removed. Please click 'Process' again.")
-        st.stop()
+        st.rerun()
 
     # Action buttons
     colA, colB = st.columns([1, 1.2])
@@ -134,9 +134,8 @@ if st.session_state.employee_data:
         if st.button("🗑️ Reset All Entries"):
             st.session_state.employee_data = []
             st.session_state.processed = False
-            st.experimental_set_query_params()
             st.success("✅ All entries cleared.")
-            st.stop()
+            st.rerun()
 
 # --------- Show Processed Results ---------
 if st.session_state.processed:
