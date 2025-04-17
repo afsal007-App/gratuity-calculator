@@ -4,14 +4,6 @@ import pandas as pd
 from io import BytesIO
 import calendar
 
-# --------- Hide Streamlit UI Elements ---------
-hide_streamlit_style = """
-    <style>
-    #MainMenu, header, footer, .st-emotion-cache-1avcm0n {
-        visibility: hidden;
-    }
-    </style>
-"""
 st.markdown(hide_streamlit_style, unsafe_allow_html=False)
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
