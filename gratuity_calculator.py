@@ -115,16 +115,26 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
 
     return monthly_rows
 
-# --------- Show Employee Table & Buttons ---------
+# --------- Display Entries and Remove Option ---------
 if st.session_state.employee_data:
     st.subheader("🗂️ Entries Added")
-    st.dataframe(pd.DataFrame(st.session_state.employee_data), use_container_width=True)
 
-    col1, col2 = st.columns([1, 1.2])
-    with col1:
+    for i, emp in enumerate(st.session_state.employee_data):
+        col1, col2, col3, col4, col5, col6 = st.columns([2, 2, 2, 2, 1, 1])
+        col1.write(f"👤 {emp['Employee Name']}")
+        col2.write(f"📅 {emp['Date of Joining'].strftime('%d-%b-%Y')}")
+        col3.write(f"💰 AED {emp['Basic Salary (AED)']:,.2f}")
+        col4.write("")
+        if col5.button("❌ Remove", key=f"remove_{i}"):
+            st.session_state.employee_data.pop(i)
+            st.session_state.processed = False
+            st.experimental_rerun()
+
+    colA, colB = st.columns([1, 1.2])
+    with colA:
         if st.button("✅ Process Gratuity Calculations"):
             st.session_state.processed = True
-    with col2:
+    with colB:
         if st.button("🗑️ Reset All Entries"):
             st.session_state.employee_data = []
             st.session_state.processed = False
@@ -164,15 +174,12 @@ if st.session_state.processed:
     st.dataframe(df_summary, use_container_width=True)
     st.subheader(f"📊 Total Gratuity Provision (Eligible Employees Only): AED {df_summary['Total Provision (AED)'].sum():,.2f}")
 
-    # Yearly
     with st.expander("📆 Yearly Provision Breakdown"):
         st.dataframe(df_yearly, use_container_width=True)
 
-    # Monthly
     with st.expander("🗓️ Month-wise Provision Breakdown"):
         st.dataframe(df_monthly, use_container_width=True)
 
-    # Download Button
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df_summary.to_excel(writer, index=False, sheet_name="Gratuity Summary")
