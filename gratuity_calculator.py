@@ -98,15 +98,14 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligib
         return []
     rows = []
     current = doj + timedelta(days=365)
-    for i in range(months):
-        rate = yearly_21 / 12 if i < 60 else yearly_30 / 12
+    while current <= as_of_date:
+        rate = yearly_21 / 12 if len(rows) < 60 else yearly_30 / 12
         rows.append({
             "Employee": emp_name,
             "Month": current.strftime("%b %Y"),
             "Provision (AED)": round(rate, 2),
-            "Rate Applied": "21 days" if i < 60 else "30 days"
+            "Rate Applied": "21 days" if len(rows) < 60 else "30 days"
         })
-        # Safely increment the month
         days_in_month = calendar.monthrange(current.year, current.month)[1]
         current += timedelta(days=days_in_month)
     return rows
