@@ -107,9 +107,9 @@ def generate_monthly_breakup(emp_name, doj, yearly_21, yearly_30, eligible):
             "Rate Applied": "21 days" if len(rows) < 60 else "30 days"
         })
         if current.month == 12:
-            current = current.replace(year=current.year + 1, month=1, day=1)
+            current = current.replace(year=current.year + 1, month=1)
         else:
-            current = current.replace(month=current.month + 1, day=1)
+            current = current.replace(month=current.month + 1)
     return rows
 
 # --------- Display Entries with Remove Option ---------
