@@ -52,6 +52,9 @@ def calculate_gratuity(doj, basic_salary, as_of):
     years = months // 12
     rem_months = months % 12
 
+    if years < 1:
+        return 0.0, years, rem_months, 0.0, 0.0, 0.0, False
+
     first_5 = min(5, years)
     after_5 = max(0, years - 5)
 
@@ -60,9 +63,12 @@ def calculate_gratuity(doj, basic_salary, as_of):
     monthly_rate = yearly_30 / 12 if years >= 5 else yearly_21 / 12
 
     provision = first_5 * yearly_21 + after_5 * yearly_30 + rem_months * monthly_rate
-    return round(provision, 2), years, rem_months, yearly_21, yearly_30, monthly_rate
+    return round(provision, 2), years, rem_months, yearly_21, yearly_30, monthly_rate, True
 
-def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_30, as_of):
+def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_30, as_of, eligible):
+    if not eligible:
+        return []
+
     year_rows = []
     for i in range(1, years + 1):
         year_end = doj.replace(year=doj.year + i)
@@ -87,7 +93,10 @@ def generate_yearly_breakup(emp_name, doj, years, rem_months, yearly_21, yearly_
 
     return year_rows
 
-def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30):
+def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30, eligible):
+    if not eligible:
+        return []
+
     monthly_rows = []
     current = doj
     for i in range(months):
@@ -99,7 +108,6 @@ def generate_monthly_breakup(emp_name, doj, months, yearly_21, yearly_30):
             "Rate Applied": "21 days" if i < 60 else "30 days"
         })
 
-        # Advance to next month
         if current.month == 12:
             current = current.replace(year=current.year + 1, month=1)
         else:
@@ -135,25 +143,26 @@ if st.session_state.processed:
         doj = emp["Date of Joining"]
         basic = emp["Basic Salary (AED)"]
 
-        total_prov, years, rem_months, y21, y30, m_rate = calculate_gratuity(doj, basic, as_of_date)
+        total_prov, years, rem_months, y21, y30, m_rate, eligible = calculate_gratuity(doj, basic, as_of_date)
         summary_data.append({
             "Employee Name": emp_name,
             "Date of Joining": doj,
             "Basic Salary (AED)": basic,
             "Years": years,
             "Months": rem_months,
+            "Eligible": "Yes" if eligible else "No",
             "Total Provision (AED)": total_prov
         })
 
-        yearly_breakup.extend(generate_yearly_breakup(emp_name, doj, years, rem_months, y21, y30, as_of_date))
-        monthly_breakup.extend(generate_monthly_breakup(emp_name, doj, years * 12 + rem_months, y21, y30))
+        yearly_breakup.extend(generate_yearly_breakup(emp_name, doj, years, rem_months, y21, y30, as_of_date, eligible))
+        monthly_breakup.extend(generate_monthly_breakup(emp_name, doj, years * 12 + rem_months, y21, y30, eligible))
 
     df_summary = pd.DataFrame(summary_data)
     df_yearly = pd.DataFrame(yearly_breakup)
     df_monthly = pd.DataFrame(monthly_breakup)
 
     st.dataframe(df_summary, use_container_width=True)
-    st.subheader(f"📊 Total Gratuity Provision: AED {df_summary['Total Provision (AED)'].sum():,.2f}")
+    st.subheader(f"📊 Total Gratuity Provision (Eligible Employees Only): AED {df_summary['Total Provision (AED)'].sum():,.2f}")
 
     # Yearly
     with st.expander("📆 Yearly Provision Breakdown"):
