@@ -5,7 +5,7 @@ from io import BytesIO
 import calendar
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
-st.title("\U0001F4DD UAE Gratuity Calculator – Multi-Employee Entry with Yearly/Monthly Breakdown")
+st.title("UAE Gratuity Calculator")
 
 # --------- Session State ---------
 if "employee_data" not in st.session_state:
