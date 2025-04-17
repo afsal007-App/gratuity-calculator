@@ -5,9 +5,17 @@ from io import BytesIO
 import calendar
 
 # --------- Hide Streamlit UI Elements ---------
+hide_streamlit_style = """
+    <style>
+    #MainMenu, header, footer, .st-emotion-cache-1avcm0n {
+        visibility: hidden;
+    }
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
-st.title("UAE Gratuity Calculator")
+st.title("\U0001F4DD UAE Gratuity Calculator – Multi-Employee Entry with Yearly/Monthly Breakdown")
 
 # --------- Session State ---------
 if "employee_data" not in st.session_state:
@@ -50,7 +58,7 @@ with st.form("employee_form"):
 def calculate_gratuity(doj, basic_salary, as_of):
     provision_start_date = doj + timedelta(days=365)
     if provision_start_date > as_of:
-        return 0.0, 0, 0, 0.0, 0.0, 0.0, False
+        return 0.0, 0, 0, 0.0, 0.0, [], False
 
     current = provision_start_date
     total_prov = 0
@@ -124,14 +132,12 @@ if st.session_state.employee_data:
             if cols[4].button("❌ Remove", key=f"remove_{i}"):
                 st.session_state.remove_index = i
 
-    # Perform safe removal
     if st.session_state.remove_index is not None:
         st.session_state.employee_data.pop(st.session_state.remove_index)
         st.session_state.remove_index = None
         st.session_state.processed = False
         st.rerun()
 
-    # Action buttons
     colA, colB = st.columns([1, 1.2])
     with colA:
         if st.button("✅ Process Gratuity Calculations"):
