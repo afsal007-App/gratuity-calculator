@@ -3,33 +3,49 @@ from datetime import date, timedelta
 import pandas as pd
 from io import BytesIO
 import calendar
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
 
-# ---------- Custom Styling ----------
-st.markdown("""
+# --------- Theme Toggle ---------
+dark_mode = st.toggle("🌗 Toggle Dark Mode")
+primary_bg = "#1e1e1e" if dark_mode else "#ffffff"
+secondary_bg = "#2c2c2c" if dark_mode else "#f8f9fa"
+font_color = "#f1f1f1" if dark_mode else "#000000"
+card_border = "#444" if dark_mode else "#ddd"
+
+# ---------- Custom Styling with Theme ---------
+st.markdown(f"""
     <style>
-    #MainMenu, header, footer {visibility: hidden;}
-    .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    .stDownloadButton button {
+    body {{ background-color: {primary_bg}; color: {font_color}; }}
+    #MainMenu, header, footer {{visibility: hidden;}}
+    .block-container {{ padding-top: 1rem; padding-bottom: 1rem; }}
+    .stDownloadButton button {{
         background-color: #4CAF50;
         color: white;
         padding: 0.6em 1.2em;
         border-radius: 8px;
         border: none;
-    }
-    .stButton button {
+    }}
+    .stButton button {{
         border-radius: 8px;
-    }
+    }}
+    .section-box {{
+        background-color: {secondary_bg};
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid {card_border};
+        margin-bottom: 1.5rem;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-    <h1 style='text-align: center; color: #2c3e50;'>UAE Gratuity Calculator</h1>
-    <p style='text-align: center; color: grey;'>Multi-Employee Entry with Yearly and Monthly Breakdown</p>
+st.markdown(f"""
+    <div class='section-box'>
+        <h1 style='text-align: center; color: #2c3e50;'>UAE Gratuity Calculator</h1>
+        <p style='text-align: center; color: grey;'>Multi-Employee Entry with Yearly and Monthly Breakdown</p>
+    </div>
 """, unsafe_allow_html=True)
 
 # --------- Session State ---------
@@ -39,6 +55,22 @@ if "processed" not in st.session_state:
     st.session_state.processed = False
 if "remove_index" not in st.session_state:
     st.session_state.remove_index = None
+
+# Add this at the end of the report section (after download)
+def show_summary_chart(df_summary):
+    if df_summary.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(data=df_summary, x="Employee Name", y="Total Provision (AED)", palette="Blues")
+    ax.set_title("Total Gratuity Provision per Employee")
+    ax.set_ylabel("Provision (AED)")
+    ax.set_xlabel("")
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%.0f', label_type='edge', fontsize=9)
+    st.pyplot(fig)
+
+# Then call: show_summary_chart(df_summary) where needed
 
 # --------- Date Selection ---------
 st.markdown("### 🗓️ Provision Date")
@@ -66,6 +98,35 @@ with st.form("employee_form"):
             })
             st.success(f"✅ Added {emp_name.strip()}")
             st.session_state.processed = False
+
+# --------- Display Entries with Remove Option ---------
+if st.session_state.employee_data:
+    st.markdown("### 🧾 Entries Added")
+    for i, emp in enumerate(st.session_state.employee_data):
+        with st.container():
+            cols = st.columns([2, 2, 2, 2, 1])
+            cols[0].markdown(f"👤 **{emp['Employee Name']}**")
+            cols[1].markdown(f"📅 **{emp['Date of Joining'].strftime('%d-%b-%Y')}**")
+            cols[2].markdown(f"💰 **AED {emp['Basic Salary (AED)']:,.2f}**")
+            if cols[4].button("❌ Remove", key=f"remove_{i}"):
+                st.session_state.remove_index = i
+
+    if st.session_state.remove_index is not None:
+        st.session_state.employee_data.pop(st.session_state.remove_index)
+        st.session_state.remove_index = None
+        st.session_state.processed = False
+        st.rerun()
+
+    colA, colB = st.columns([1, 1.2])
+    with colA:
+        if st.button("✅ Process Gratuity Calculations"):
+            st.session_state.processed = True
+    with colB:
+        if st.button("🗑️ Reset All Entries"):
+            st.session_state.employee_data = []
+            st.session_state.processed = False
+            st.success("✅ All entries cleared.")
+            st.rerun()
 
 # --------- Helper Functions ---------
 def calculate_gratuity(doj, basic_salary, as_of):
@@ -132,35 +193,6 @@ def generate_monthly_breakup(emp_name, monthly_rows):
         } for month, provision, rate in monthly_rows
     ]
 
-# --------- Display Entries with Remove Option ---------
-if st.session_state.employee_data:
-    st.markdown("### 🧾 Entries Added")
-    for i, emp in enumerate(st.session_state.employee_data):
-        with st.container():
-            cols = st.columns([2, 2, 2, 2, 1])
-            cols[0].markdown(f"👤 **{emp['Employee Name']}**")
-            cols[1].markdown(f"📅 **{emp['Date of Joining'].strftime('%d-%b-%Y')}**")
-            cols[2].markdown(f"💰 **AED {emp['Basic Salary (AED)']:,.2f}**")
-            if cols[4].button("❌ Remove", key=f"remove_{i}"):
-                st.session_state.remove_index = i
-
-    if st.session_state.remove_index is not None:
-        st.session_state.employee_data.pop(st.session_state.remove_index)
-        st.session_state.remove_index = None
-        st.session_state.processed = False
-        st.rerun()
-
-    colA, colB = st.columns([1, 1.2])
-    with colA:
-        if st.button("✅ Process Gratuity Calculations"):
-            st.session_state.processed = True
-    with colB:
-        if st.button("🗑️ Reset All Entries"):
-            st.session_state.employee_data = []
-            st.session_state.processed = False
-            st.success("✅ All entries cleared.")
-            st.rerun()
-
 # --------- Show Processed Results ---------
 if st.session_state.processed:
     st.markdown("### 📋 Gratuity Summary")
@@ -207,3 +239,6 @@ if st.session_state.processed:
         df_monthly.to_excel(writer, index=False, sheet_name="Monthly Breakdown")
 
     st.download_button("📥 Download Excel Report", data=output.getvalue(), file_name="gratuity_report.xlsx")
+
+    # Show chart after summary
+    show_summary_chart(df_summary)
