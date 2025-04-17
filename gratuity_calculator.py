@@ -28,7 +28,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-    <h1 style='text-align: center; color: #2c3e50;'>🏆 UAE Gratuity Calculator</h1>
+    <h1 style='text-align: center; color: #2c3e50;'>UAE Gratuity Calculator</h1>
     <p style='text-align: center; color: grey;'>Multi-Employee Entry with Yearly and Monthly Breakdown</p>
 """, unsafe_allow_html=True)
 
