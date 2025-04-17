@@ -1,5 +1,3 @@
-# 📁 gratuity_manual_entry.py
-
 import streamlit as st
 from datetime import date, datetime
 import pandas as pd
@@ -43,15 +41,9 @@ with st.form("employee_form"):
                 "Basic Salary (AED)": basic_salary
             })
             st.success(f"✅ Added {emp_name.strip()}")
-            st.session_state.processed = False  # reset if new entry is added
+            st.session_state.processed = False  # reset after new entry
 
-# --------- PROCESS Button ---------
-if st.session_state.employee_data:
-    st.write("### 👉 Entries Added:", len(st.session_state.employee_data))
-    if st.button("✅ Process Gratuity Calculations"):
-        st.session_state.processed = True
-
-# --------- Gratuity Calculation Function ---------
+# --------- Helper Function ---------
 def calculate_gratuity(doj, basic_salary, as_of):
     months = (as_of.year - doj.year) * 12 + (as_of.month - doj.month)
     if as_of.day < doj.day:
@@ -70,7 +62,22 @@ def calculate_gratuity(doj, basic_salary, as_of):
     provision = first_5 * yearly_21 + after_5 * yearly_30 + rem_months * monthly_rate
     return round(provision, 2), years, rem_months
 
-# --------- Process and Display ---------
+# --------- Display Entries + Always-Visible Buttons ---------
+if st.session_state.employee_data:
+    st.subheader("🗂️ Entries Added")
+    st.dataframe(pd.DataFrame(st.session_state.employee_data), use_container_width=True)
+
+    col1, col2 = st.columns([1, 1.2])
+    with col1:
+        if st.button("✅ Process Gratuity Calculations"):
+            st.session_state.processed = True
+    with col2:
+        if st.button("🗑️ Reset All Entries"):
+            st.session_state.employee_data = []
+            st.session_state.processed = False
+            st.experimental_rerun()
+
+# --------- Processed Gratuity Output ---------
 if st.session_state.processed:
     st.subheader("📋 Employee Gratuity Table")
 
@@ -97,9 +104,3 @@ if st.session_state.processed:
         df.to_excel(writer, index=False, sheet_name="Gratuity Summary")
         writer.save()
     st.download_button("📥 Download as Excel", data=output.getvalue(), file_name="manual_gratuity_summary.xlsx")
-
-# --------- Reset Button ---------
-if st.button("🗑️ Reset All Entries"):
-    st.session_state.employee_data = []
-    st.session_state.processed = False
-    st.experimental_rerun()
