@@ -4,15 +4,6 @@ import pandas as pd
 from io import BytesIO
 import calendar
 
-# --------- Hide Streamlit UI Elements ---------
-hide_streamlit_style = """
-    <style>
-    #MainMenu, header, footer, .st-emotion-cache-1avcm0n {
-        visibility: hidden;
-    }
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Manual Gratuity Calculator", layout="wide")
 st.title("\U0001F4DD UAE Gratuity Calculator – Multi-Employee Entry with Yearly/Monthly Breakdown")
