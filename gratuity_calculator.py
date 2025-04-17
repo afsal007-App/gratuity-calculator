@@ -6,9 +6,8 @@ import calendar
 
 # --------- Hide Streamlit UI Elements ---------
 hide_streamlit_style = """
-    <style>
-    #MainMenu, header, footer, .st-emotion-cache-1avcm0n {
-        visibility: hidden;
+<style>
+#MainMenu, header, footer, .st-emotion-cache-1avcm0n {visibility: hidden;
     }
     </style>
 """
